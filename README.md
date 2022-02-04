@@ -97,8 +97,6 @@ The read mapper in `gsa` doesn’t output matches with leading or training delet
 
 ## Evaluation
 
-## Evaluation
-
 Once you have implemented the `readmap` program (and tested it to the best of your abilities) fill out the report below, and notify me that your pull request is ready for review.
 
 # Report
