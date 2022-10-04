@@ -1,0 +1,8 @@
+name: Language specific unit tests
+description: Run Python unit tests
+runs:
+  using: composite
+  steps:
+    - name: PyTest checking
+      run: if ls src/test_*.py 2> /dev/null; then python3 -m pytest src; fi
+      shell: bash
