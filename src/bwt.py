@@ -34,7 +34,7 @@ def burrows_wheeler_transform(
     and the suffix array over x.
     """
     x_, alpha = Alphabet.mapped_string_with_sentinel(x)
-    sa = sais_alphabet(SubSeq[int](x_), alpha)
+    sa = sais_alphabet(x_, alpha)
     bwt = bytearray(x_[j - 1] for j in sa)
     return bwt, alpha, sa
 

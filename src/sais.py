@@ -1,5 +1,6 @@
 """Implementation of the SAIS algorithm."""
 
+from array import array
 import itertools
 from typing import (
     Callable,
@@ -7,16 +8,19 @@ from typing import (
     Iterable,
     TypeVar
 )
+from collections.abc import (
+    Sequence,
+    MutableSequence
+)
 
 from alphabet import Alphabet
 from bv import BitVector
-from subseq import SubSeq
 
 T = TypeVar('T')
 UNDEFINED = -1  # Undefined val in SA
 
 
-def classify_sl(is_s: BitVector, x: SubSeq[int]) -> None:
+def classify_sl(is_s: BitVector, x: memoryview) -> None:
     """Classify positions into S or L."""
     last = len(x) - 1
     is_s[last] = True
@@ -34,7 +38,7 @@ class Buckets:
 
     buckets: list[int]
 
-    def __init__(self, x: SubSeq[int], asize: int):
+    def __init__(self, x: memoryview, asize: int):
         """Compute the buckets from a string x over alphabet of size asize."""
         self.buckets = [0] * asize
         for a in x:
@@ -79,18 +83,19 @@ class Buckets:
         return next_bucket
 
 
-def bucket_lms(x: SubSeq[int], sa: SubSeq[int],
+def bucket_lms(x: memoryview, sa: memoryview,
                buckets: Buckets, is_s: BitVector) \
         -> None:
     """Place LMS strings in their correct buckets."""
     next_end = buckets.calc_ends()
-    sa[:] = UNDEFINED
+    for i in range(len(sa)):
+        sa[i] = UNDEFINED
     for i, _ in enumerate(x):
         if is_lms(is_s, i):
             sa[next_end(x[i])] = i
 
 
-def induce_l(x: SubSeq[int], sa: SubSeq[int],
+def induce_l(x: memoryview, sa: memoryview,
              buckets: Buckets, is_s: BitVector) \
         -> None:
     """Induce L suffixes from the LMS strings."""
@@ -104,7 +109,7 @@ def induce_l(x: SubSeq[int], sa: SubSeq[int],
         sa[next_front(x[j])] = j
 
 
-def induce_s(x: SubSeq[int], sa: SubSeq[int],
+def induce_s(x: memoryview, sa: memoryview,
              buckets: Buckets, is_s: BitVector) \
         -> None:
     """Induce S suffixes from the L suffixes."""
@@ -118,7 +123,7 @@ def induce_s(x: SubSeq[int], sa: SubSeq[int],
         sa[next_end(x[j])] = j
 
 
-def equal_lms(x: SubSeq[int], is_s: BitVector, i: int, j: int) -> bool:
+def equal_lms(x: memoryview, is_s: BitVector, i: int, j: int) -> bool:
     """Test if two LMS strings are identical."""
     if i == j:
         # This happens as a special case in the beginning of placing them.
@@ -138,9 +143,9 @@ def equal_lms(x: SubSeq[int], is_s: BitVector, i: int, j: int) -> bool:
     return False  # just for the linter
 
 
-def compact_seq(x: SubSeq[T],
-                p: Callable[[T], bool],
-                y: Optional[Iterable[T]] = None) -> int:
+def compact_seq(x: memoryview,
+                p: Callable[[int], bool],
+                y: Optional[memoryview] = None) -> int:
     """
     Compacts elements in y satisfying p into x.
 
@@ -155,8 +160,8 @@ def compact_seq(x: SubSeq[T],
     return k
 
 
-def reduce_lms(x: SubSeq[int], sa: SubSeq[int], is_s: BitVector) \
-        -> tuple[SubSeq[int], SubSeq[int], int]:
+def reduce_lms(x: memoryview, sa: memoryview, is_s: BitVector) \
+        -> tuple[memoryview, memoryview, int]:
     """Construct reduced string from LMS strings."""
     # Compact all the LMS indices in the first
     # part of the suffix array...
@@ -165,7 +170,8 @@ def reduce_lms(x: SubSeq[int], sa: SubSeq[int], is_s: BitVector) \
     # Create the alphabet and write the translation
     # into the buffer in the right order
     compact, buffer = sa[:k], sa[k:]
-    buffer[:] = UNDEFINED
+    for i in range(len(buffer)):
+        buffer[i] = UNDEFINED
     prev, letter = compact[0], 0
     for j in compact:
         if not equal_lms(x, is_s, prev, j):
@@ -179,8 +185,8 @@ def reduce_lms(x: SubSeq[int], sa: SubSeq[int], is_s: BitVector) \
     return buffer[:k], compact, letter + 1
 
 
-def reverse_reduction(x: SubSeq[int], sa: SubSeq[int],
-                      offsets: SubSeq[int], red_sa: SubSeq[int],
+def reverse_reduction(x: memoryview, sa: memoryview,
+                      offsets: memoryview, red_sa: memoryview,
                       buckets: Buckets,
                       is_s: BitVector) -> None:
     """Get the LMS string order back from the reduced suffix array."""
@@ -194,7 +200,8 @@ def reverse_reduction(x: SubSeq[int], sa: SubSeq[int],
         sa[i] = offsets[j]
 
     # Mark the sa after the LMS indices as undefined
-    sa[len(red_sa):] = UNDEFINED
+    for i in range(len(red_sa), len(sa)):
+        sa[i] = UNDEFINED
 
     next_end = buckets.calc_ends()
     for i in reversed(range(len(red_sa))):
@@ -202,10 +209,8 @@ def reverse_reduction(x: SubSeq[int], sa: SubSeq[int],
         sa[next_end(x[j])] = j
 
 
-def sais_rec(x: SubSeq[int],
-             sa: SubSeq[int],
-             asize: int,
-             is_s: BitVector) -> None:
+def sais_rec(x: memoryview, sa: memoryview,
+             asize: int, is_s: BitVector) -> None:
     """Recursive SAIS algorithm."""
     if len(x) == asize:
         # base case...
@@ -233,15 +238,15 @@ def sais_rec(x: SubSeq[int],
         induce_s(x, sa, buckets, is_s)
 
 
-def sais_alphabet(x: SubSeq[int], alpha: Alphabet) -> list[int]:
+def sais_alphabet(x: array, alpha: Alphabet) -> array:
     """Run the sais algorithm from a subsequence and an alphabet."""
-    sa = [0] * len(x)
+    sa = array('l', [0] * len(x))
     is_s = BitVector(size=len(x))
-    sais_rec(x, SubSeq[int](sa), len(alpha), is_s)
+    sais_rec(memoryview(x), memoryview(sa), len(alpha), is_s)
     return sa
 
 
-def sais(x: str) -> list[int]:
+def sais(x: str) -> array:
     """Run the sais algorithm from a string."""
     x_, alpha = Alphabet.mapped_subseq_with_sentinel(x)
     return sais_alphabet(x_, alpha)

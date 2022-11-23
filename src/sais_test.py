@@ -1,5 +1,6 @@
 """Test of sais algorithm."""
 
+from array import array
 from test_helpers import (
     check_sorted,
     fibonacci_string,
@@ -33,7 +34,7 @@ def test_classify() -> None:
     is_s = BitVector(size=len(x))
     assert len(is_s) == len(x)
 
-    classify_sl(is_s, x)
+    classify_sl(is_s, memoryview(x))
 
     expected = [
         # L    S     L      L      S     L      L
@@ -51,7 +52,7 @@ def test_is_lms() -> None:
     assert len(x) == len("mississippi") + 1
     is_s = BitVector(len(x))
     assert len(is_s) == len(x)
-    classify_sl(is_s, x)
+    classify_sl(is_s, memoryview(x))
     # mississippi$
     # LSLLSLLSLLLS
     # -*--*--*---*
@@ -71,7 +72,7 @@ def test_is_lms() -> None:
         z = random_string(20, "abcd")
         y, _ = Alphabet.mapped_subseq_with_sentinel(z)
         is_s = BitVector(len(y))
-        classify_sl(is_s, y)
+        classify_sl(is_s, memoryview(y))
 
         assert is_s[len(y) - 1]
         assert is_lms(is_s, len(y) - 1)
@@ -79,9 +80,9 @@ def test_is_lms() -> None:
 
 def test_base_case() -> None:
     """Test that we can sort base cases."""
-    assert sais("abc") == [3, 0, 1, 2]
-    assert sais("cba") == [3, 2, 1, 0]
-    assert sais("acb") == [3, 0, 2, 1]
+    assert sais("abc") == array('l', [3, 0, 1, 2])
+    assert sais("cba") == array('l', [3, 2, 1, 0])
+    assert sais("acb") == array('l', [3, 0, 2, 1])
 
 
 def test_mississippi() -> None:

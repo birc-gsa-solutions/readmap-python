@@ -1,5 +1,6 @@
 """Helper functions for testing."""
 
+from array import array
 import random
 import string
 from collections.abc import Callable, Iterable, Iterator
@@ -71,15 +72,14 @@ def pick_random_suffix(x: str, n: int) -> Iterator[str]:
         yield x[i:]
 
 
-def check_sorted(x: str, sa: list[int]) -> None:
+def check_sorted(x: str, sa: array) -> None:
     """Check that the suffixes in sa are sorted."""
     assert x != ""
     assert len(x) == len(sa) or len(x) + 1 == len(sa)
-    y = SubSeq[str](x)  # For faster comparison (faster than slicing)
     start = 0 if len(sa) == len(x) else 1  # skip sentinel if included
     for i in range(start, len(sa) - 1):
         j, k = sa[i], sa[i + 1]
-        assert y[j:] < y[k:], \
+        assert x[j:] < x[k:], \
             f"String {x}, suffix x[{j}:] = {x[j:]} >= x[{k}:] = {x[k:]}"
 
 

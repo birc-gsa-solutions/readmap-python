@@ -4,7 +4,9 @@ from __future__ import annotations
 from typing import (
     Iterable
 )
-from subseq import SubSeq
+from array import (
+    array
+)
 
 
 class Alphabet:
@@ -88,7 +90,7 @@ class Alphabet:
         return alpha.map(x), alpha
 
     @staticmethod
-    def mapped_subseq(x: str) -> tuple[SubSeq[int], Alphabet]:
+    def mapped_subseq(x: str) -> tuple[array, Alphabet]:
         """
         Create mapped string with corresponding alphabet.
 
@@ -98,7 +100,7 @@ class Alphabet:
         returns a bytearray for the mapped string.
         """
         x_, alpha = Alphabet.mapped_string(x)
-        return SubSeq[int](x_), alpha
+        return array('l', (a for a in x_)), alpha
 
     @staticmethod
     def mapped_string_with_sentinel(x: str) -> tuple[bytearray, Alphabet]:
@@ -113,7 +115,7 @@ class Alphabet:
         return alpha.map_with_sentinel(x), alpha
 
     @staticmethod
-    def mapped_subseq_with_sentinel(x: str) -> tuple[SubSeq[int], Alphabet]:
+    def mapped_subseq_with_sentinel(x: str) -> tuple[array, Alphabet]:
         """
         Create mapped string with corresponding alphabet.
 
@@ -125,4 +127,4 @@ class Alphabet:
         returns a bytearray for the mapped string.
         """
         x_, alpha = Alphabet.mapped_string_with_sentinel(x)
-        return SubSeq[int](x_), alpha
+        return array('l', (a for a in x_)), alpha
