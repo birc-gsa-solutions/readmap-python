@@ -4,7 +4,7 @@ from typing import (
     Iterator, Callable,
     NamedTuple
 )
-
+from array import array
 from alphabet import Alphabet
 from sais import sais_alphabet
 from approx import (
@@ -20,9 +20,7 @@ ApproxSearchFunc = Callable[
 ]
 
 
-def burrows_wheeler_transform(
-    x: str
-) -> tuple[bytearray, Alphabet, list[int]]:
+def burrows_wheeler_transform(x: str) -> tuple[bytearray, Alphabet, array]:
     """
     Construct the Burrows-Wheeler transform.
 

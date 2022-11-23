@@ -7,7 +7,7 @@ from test_helpers import (
     random_string
 )
 from alphabet import Alphabet
-from bv import BitVector
+from bitarray import bitarray
 from sais import classify_sl, is_lms, sais
 
 
@@ -31,7 +31,7 @@ def test_classify() -> None:
     x, _ = Alphabet.mapped_subseq_with_sentinel("mississippi")
     assert len(x) == len("mississippi") + 1
 
-    is_s = BitVector(size=len(x))
+    is_s = bitarray(len(x))
     assert len(is_s) == len(x)
 
     classify_sl(is_s, memoryview(x))
@@ -50,7 +50,7 @@ def test_is_lms() -> None:
     """Test that is_lms works."""
     x, _ = Alphabet.mapped_subseq_with_sentinel("mississippi")
     assert len(x) == len("mississippi") + 1
-    is_s = BitVector(len(x))
+    is_s = bitarray(len(x))
     assert len(is_s) == len(x)
     classify_sl(is_s, memoryview(x))
     # mississippi$
@@ -71,7 +71,7 @@ def test_is_lms() -> None:
     for _ in range(10):
         z = random_string(20, "abcd")
         y, _ = Alphabet.mapped_subseq_with_sentinel(z)
-        is_s = BitVector(len(y))
+        is_s = bitarray(len(y))
         classify_sl(is_s, memoryview(y))
 
         assert is_s[len(y) - 1]

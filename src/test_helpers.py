@@ -5,8 +5,6 @@ import random
 import string
 from collections.abc import Callable, Iterable, Iterator
 
-from delete_me import SubSeq
-
 # I'm not sure about the prototype here. I think I want
 # to allow any number of paramters, if pytest can add
 # mock objects and such... I haven't studied that sufficiently

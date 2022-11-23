@@ -14,13 +14,13 @@ from collections.abc import (
 )
 
 from alphabet import Alphabet
-from bv import BitVector
+from bitarray import bitarray
 
 T = TypeVar('T')
 UNDEFINED = -1  # Undefined val in SA
 
 
-def classify_sl(is_s: BitVector, x: memoryview) -> None:
+def classify_sl(is_s: bitarray, x: memoryview) -> None:
     """Classify positions into S or L."""
     last = len(x) - 1
     is_s[last] = True
@@ -28,7 +28,7 @@ def classify_sl(is_s: BitVector, x: memoryview) -> None:
         is_s[i] = x[i] < x[i + 1] or (x[i] == x[i + 1] and is_s[i + 1])
 
 
-def is_lms(is_s: BitVector, i: int) -> bool:
+def is_lms(is_s: bitarray, i: int) -> bool:
     """Test if index i is an LMS index."""
     return is_s[i] and not is_s[i - 1] if i > 0 else False
 
@@ -84,7 +84,7 @@ class Buckets:
 
 
 def bucket_lms(x: memoryview, sa: memoryview,
-               buckets: Buckets, is_s: BitVector) \
+               buckets: Buckets, is_s: bitarray) \
         -> None:
     """Place LMS strings in their correct buckets."""
     next_end = buckets.calc_ends()
@@ -96,7 +96,7 @@ def bucket_lms(x: memoryview, sa: memoryview,
 
 
 def induce_l(x: memoryview, sa: memoryview,
-             buckets: Buckets, is_s: BitVector) \
+             buckets: Buckets, is_s: bitarray) \
         -> None:
     """Induce L suffixes from the LMS strings."""
     next_front = buckets.calc_fronts()
@@ -110,7 +110,7 @@ def induce_l(x: memoryview, sa: memoryview,
 
 
 def induce_s(x: memoryview, sa: memoryview,
-             buckets: Buckets, is_s: BitVector) \
+             buckets: Buckets, is_s: bitarray) \
         -> None:
     """Induce S suffixes from the L suffixes."""
     next_end = buckets.calc_ends()
@@ -123,7 +123,7 @@ def induce_s(x: memoryview, sa: memoryview,
         sa[next_end(x[j])] = j
 
 
-def equal_lms(x: memoryview, is_s: BitVector, i: int, j: int) -> bool:
+def equal_lms(x: memoryview, is_s: bitarray, i: int, j: int) -> bool:
     """Test if two LMS strings are identical."""
     if i == j:
         # This happens as a special case in the beginning of placing them.
@@ -160,7 +160,7 @@ def compact_seq(x: memoryview,
     return k
 
 
-def reduce_lms(x: memoryview, sa: memoryview, is_s: BitVector) \
+def reduce_lms(x: memoryview, sa: memoryview, is_s: bitarray) \
         -> tuple[memoryview, memoryview, int]:
     """Construct reduced string from LMS strings."""
     # Compact all the LMS indices in the first
@@ -188,7 +188,7 @@ def reduce_lms(x: memoryview, sa: memoryview, is_s: BitVector) \
 def reverse_reduction(x: memoryview, sa: memoryview,
                       offsets: memoryview, red_sa: memoryview,
                       buckets: Buckets,
-                      is_s: BitVector) -> None:
+                      is_s: bitarray) -> None:
     """Get the LMS string order back from the reduced suffix array."""
     # Work out where the LMS strings are in the
     # original string. Compact those indices
@@ -210,7 +210,7 @@ def reverse_reduction(x: memoryview, sa: memoryview,
 
 
 def sais_rec(x: memoryview, sa: memoryview,
-             asize: int, is_s: BitVector) -> None:
+             asize: int, is_s: bitarray) -> None:
     """Recursive SAIS algorithm."""
     if len(x) == asize:
         # base case...
@@ -241,7 +241,7 @@ def sais_rec(x: memoryview, sa: memoryview,
 def sais_alphabet(x: array, alpha: Alphabet) -> array:
     """Run the sais algorithm from a subsequence and an alphabet."""
     sa = array('l', [0] * len(x))
-    is_s = BitVector(size=len(x))
+    is_s = bitarray(len(x))
     sais_rec(memoryview(x), memoryview(sa), len(alpha), is_s)
     return sa
 
