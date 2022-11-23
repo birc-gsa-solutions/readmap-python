@@ -5,7 +5,7 @@ import random
 import string
 from collections.abc import Callable, Iterable, Iterator
 
-from subseq import SubSeq
+from delete_me import SubSeq
 
 # I'm not sure about the prototype here. I think I want
 # to allow any number of paramters, if pytest can add
@@ -103,5 +103,5 @@ def check_equal_matches(x: str, p: str,
     # give us sorted output
     iters: list[list[int]] = [sorted(algo(x, p)) for algo in algos]
     print('Iters:', iters)
-    for res in zip(*iters, strict=True):  # type: ignore
+    for res in zip(*iters, strict=True):
         assert all(res[i] == res[0] for i in range(1, len(res)))

@@ -7,7 +7,6 @@ from typing import (
 
 from alphabet import Alphabet
 from sais import sais_alphabet
-from subseq import SubSeq
 from approx import (
     Edit,
     edits_to_cigar
