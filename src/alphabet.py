@@ -1,12 +1,8 @@
 """Implements code for mapping strings to smaller alphabets."""
 
 from __future__ import annotations
-from typing import (
-    Iterable
-)
-from array import (
-    array
-)
+from typing import Iterable
+from array import array
 
 
 class Alphabet:
