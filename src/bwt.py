@@ -1,7 +1,5 @@
 """Implementatin of the Burrows-Wheeler transform and related algorithms."""
 
-import numpy as np
-import numpy.typing as npt
 from typing import (
     Iterator, Callable,
     NamedTuple
@@ -81,8 +79,7 @@ class OTable:
     where bwt[j] == a.
     """
 
-    # _tbl: list[list[int]]
-    _tbl = npt.DTypeLike
+    _tbl: list[list[int]]
 
     def __init__(self, bwt: bytearray, asize: int) -> None:
         """
@@ -91,16 +88,28 @@ class OTable:
         Compute the O-table from the bwt transformed string and the size
         of the alphabet the bwt string is over.
         """
-        nrow = asize
-        ncol = len(bwt) + 1
+        # We exclude $ from lookups, so there are this many
+        # rows.
+        nrow = asize - 1
+        # We need to index to len(bwt), but we don't represent first column
+        # so there are len(bwt) columns.
+        ncol = len(bwt)
 
-        self._tbl = np.zeros((nrow, ncol), dtype='i')
+        self._tbl = [[0] * ncol for _ in range(nrow)]
 
-        char_inc = np.eye(asize, asize)
-        for i in range(1, ncol):
-            prev = self._tbl[:, i-1]
-            add = char_inc[bwt[i-1], :]
-            self._tbl[:, i] = self._tbl[:, i-1] + char_inc[bwt[i-1], :]
+        # The first column is all zeros, the second
+        # should hold a 1 in the row that has character
+        # bwt[0]. The we b-1 because of the sentinel and
+        # we use column 0 for the first real column.
+        self._tbl[bwt[0] - 1][0] = 1
+
+        # We already have cols 0 and 1. Now we need to
+        # go up to (and including) len(bwt).
+        for i in range(2, len(bwt) + 1):
+            b = bwt[i - 1]
+            # Characters, except for sentinel
+            for a in range(1, asize):
+                self._tbl[a - 1][i - 1] = self._tbl[a - 1][i - 2] + (a == b)
 
     def __getitem__(self, idx: tuple[int, int]) -> int:
         """
@@ -109,7 +118,8 @@ class OTable:
         a is the first and i the second value in the idx tuple.
         """
         a, i = idx
-        return self._tbl[a, i]
+        assert a > 0, "Don't look up the sentinel"
+        return 0 if i == 0 else self._tbl[a - 1][i - 1]
 
 
 class FMIndexTables(NamedTuple):
