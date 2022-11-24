@@ -27,8 +27,6 @@ def test_otable() -> None:
     # we are only testing...
     # pylint: disable=protected-access
     otab = bwt.OTable(transformed, len(alpha))
-    # assert len(otab._tbl) == len(alpha) - 1
-    # assert len(otab._tbl[0]) == len(transformed)
     assert otab._tbl.shape == (len(alpha), len(transformed)+1)
     assert_array_equal(otab._tbl[0, :], [0, 0, 0, 1, 1, 1, 1], "$ counts")
     assert_array_equal(otab._tbl[1, :], [0, 1, 1, 1, 2, 3, 3], "a counts")
