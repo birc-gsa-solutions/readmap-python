@@ -81,7 +81,8 @@ class OTable:
     where bwt[j] == a.
     """
 
-    _tbl: npt.ArrayLike
+    # _tbl: list[list[int]]
+    _tbl = npt.DTypeLike
 
     def __init__(self, bwt: bytearray, asize: int) -> None:
         """
