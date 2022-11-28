@@ -1,5 +1,6 @@
 """Test bwt."""
 
+import numpy as np
 from test_helpers import check_matches
 import alphabet
 import approx
@@ -9,7 +10,7 @@ import bwt
 def test_ctable() -> None:
     """Test C-table."""
     x, alpha = alphabet.Alphabet.mapped_string_with_sentinel("aabca")
-    ctab = bwt.CTable(x, len(alpha))
+    ctab = bwt.build_ctab(x, len(alpha))
     assert ctab[0] == 0, "Nothing is smaller than the sentinel"
     assert ctab[1] == 1, "$ is smaller than 'a'"
     assert ctab[2] == 4, "$ + three 'a'"
@@ -25,12 +26,11 @@ def test_otable() -> None:
     # we shouldn't look at private members, of course, but
     # we are only testing...
     # pylint: disable=protected-access
-    otab = bwt.OTable(transformed, len(alpha))
-    assert len(otab._tbl) == len(alpha) - 1
-    assert len(otab._tbl[0]) == len(transformed)
-    assert otab._tbl[0] == [1, 1, 1, 2, 3, 3], "a counts"
-    assert otab._tbl[1] == [0, 0, 0, 0, 0, 1], "b counts"
-    assert otab._tbl[2] == [0, 1, 1, 1, 1, 1], "c counts"
+    otab = bwt.build_otab(transformed, len(alpha))
+    assert otab.shape == (len(alpha), len(transformed)+1)
+    assert np.all(otab[1, :] == [0, 1, 1, 1, 2, 3, 3]), "a counts"
+    assert np.all(otab[2, :] == [0, 0, 0, 0, 0, 0, 1]), "b counts"
+    assert np.all(otab[3, :] == [0, 0, 1, 1, 1, 1, 1]), "c counts"
 
 
 def test_mississippi_aprox_0() -> None:
