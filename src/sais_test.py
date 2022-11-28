@@ -8,7 +8,7 @@ from test_helpers import (
 )
 from alphabet import Alphabet
 from bitarray import bitarray
-from sais import classify_sl, is_lms, sais
+from sais import classify_sl, sais
 
 
 def test_remap() -> None:
@@ -44,38 +44,6 @@ def test_classify() -> None:
     ]
     for i, b in enumerate(is_s):
         assert b == expected[i]
-
-
-def test_is_lms() -> None:
-    """Test that is_lms works."""
-    x, _ = Alphabet.mapped_subseq_with_sentinel("mississippi")
-    assert len(x) == len("mississippi") + 1
-    is_s = bitarray(len(x))
-    assert len(is_s) == len(x)
-    classify_sl(is_s, memoryview(x))
-    # mississippi$
-    # LSLLSLLSLLLS
-    # -*--*--*---*
-    expected = [
-        # -    *     -      -
-        False, True, False, False,
-        # *   -      -      *
-        True, False, False, True,
-        # -    -      -      *
-        False, False, False, True
-    ]
-    assert len(is_s) == len(expected)
-    for i, _ in enumerate(expected):
-        assert is_lms(is_s, i) == expected[i]
-
-    for _ in range(10):
-        z = random_string(20, "abcd")
-        y, _ = Alphabet.mapped_subseq_with_sentinel(z)
-        is_s = bitarray(len(y))
-        classify_sl(is_s, memoryview(y))
-
-        assert is_s[len(y) - 1]
-        assert is_lms(is_s, len(y) - 1)
 
 
 def test_base_case() -> None:

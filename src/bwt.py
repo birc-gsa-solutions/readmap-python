@@ -9,8 +9,8 @@ import numpy.typing as npt
 from array import array
 from collections import Counter
 from alphabet import Alphabet
-# from sais import sais_alphabet
-from prefix_dub import prefix_doubling
+from sais import sais_alphabet
+# from prefix_dub import prefix_doubling
 from approx import (
     Edit,
     edits_to_cigar
@@ -35,7 +35,7 @@ def burrows_wheeler_transform(x: str) -> tuple[bytearray, Alphabet, array]:
     and the suffix array over x.
     """
     x_, alpha = Alphabet.mapped_string_with_sentinel(x)
-    sa = prefix_doubling(x_, len(alpha))  # sais_alphabet(x_, alpha)
+    sa = sais_alphabet(x_, alpha)
     bwt = bytearray(x_[j - 1] for j in sa)
     return bwt, alpha, sa
 

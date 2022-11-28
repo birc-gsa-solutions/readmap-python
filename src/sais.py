@@ -1,18 +1,14 @@
 """Implementation of the SAIS algorithm."""
 
 from array import array
-import itertools
 from typing import (
     Callable,
     Optional,
-    Iterable,
     TypeVar
 )
-from collections.abc import (
-    Sequence,
-    MutableSequence
-)
-
+import numpy as np
+import numpy.typing as npt
+from collections import Counter
 
 from alphabet import Alphabet
 from bitarray import bitarray
@@ -25,103 +21,61 @@ def classify_sl(is_s: bitarray, x: memoryview) -> None:
     """Classify positions into S or L."""
     last = len(x) - 1
     is_s[last] = True
-    for i in reversed(range(last)):
+    for i in range(len(x)-2, -1, -1):
         is_s[i] = x[i] < x[i + 1] or (x[i] == x[i + 1] and is_s[i + 1])
 
 
-def is_lms(is_s: bitarray, i: int) -> bool:
-    """Test if index i is an LMS index."""
-    return is_s[i] and not is_s[i - 1]
+def compute_buckets(counts: Counter, asize: int) -> npt.NDArray[np.int32]:
+    buckets = np.zeros(asize+1, dtype=np.int32)
+    for a in range(1, asize+1):
+        buckets[a] = buckets[a-1] + counts[a-1]
+    return buckets
 
 
-class Buckets:
-    """Buckets for bucketing suffixes."""
-
-    buckets: list[int]
-
-    def __init__(self, x: memoryview, asize: int):
-        """Compute the buckets from a string x over alphabet of size asize."""
-        self.buckets = [0] * asize
-        for a in x:
-            self.buckets[a] += 1
-
-    def calc_fronts(self) -> Callable[[int], int]:
-        """
-        Get the front of the buckets.
-
-        The result is a function for updating the buckets and
-        returning the next available position in the bucket.
-        """
-        fronts = [0] * len(self.buckets)
-        s = 0
-        for i, b in enumerate(self.buckets):
-            fronts[i] = s
-            s += b
-
-        def next_bucket(bucket: int) -> int:
-            fronts[bucket] += 1
-            return fronts[bucket] - 1
-
-        return next_bucket
-
-    def calc_ends(self) -> Callable[[int], int]:
-        """
-        Get the end of the buckets.
-
-        The result is a function for updating the buckets and
-        returning the next available position in the bucket.
-        """
-        ends = [0] * len(self.buckets)
-        s = 0
-        for i, b in enumerate(self.buckets):
-            s += b
-            ends[i] = s
-
-        def next_bucket(bucket: int) -> int:
-            ends[bucket] -= 1
-            return ends[bucket]
-
-        return next_bucket
-
-
-def bucket_lms(x: memoryview, sa: memoryview,
-               buckets: Buckets, is_s: bitarray) \
+def bucket_lms(x: memoryview, asize: int,
+               sa: memoryview, counts: Counter,
+               is_s: bitarray) \
         -> None:
     """Place LMS strings in their correct buckets."""
-    next_end = buckets.calc_ends()
+    buckets = compute_buckets(counts, asize)
     for i in range(len(sa)):
         sa[i] = UNDEFINED
     for i, _ in enumerate(x):
-        if is_lms(is_s, i):
-            sa[next_end(x[i])] = i
+        if is_s[i] and not is_s[i-1]:
+            buckets[x[i]+1] -= 1
+            sa[buckets[x[i]+1]] = i
 
 
-def induce_l(x: memoryview, sa: memoryview,
-             buckets: Buckets, is_s: bitarray) \
+def induce_l(x: memoryview, asize: int,
+             sa: memoryview, counts: Counter,
+             is_s: bitarray) \
         -> None:
     """Induce L suffixes from the LMS strings."""
-    next_front = buckets.calc_fronts()
+    buckets = compute_buckets(counts, asize)
     for i in range(len(x)):
         j = sa[i] - 1
         if sa[i] == 0 or sa[i] == UNDEFINED:
             continue
         if is_s[j]:
             continue
-        sa[next_front(x[j])] = j
+        sa[buckets[x[j]]] = j
+        buckets[x[j]] += 1
 
 
-def induce_s(x: memoryview, sa: memoryview,
-             buckets: Buckets, is_s: bitarray) \
+def induce_s(x: memoryview, asize: int,
+             sa: memoryview, counts: Counter,
+             is_s: bitarray) \
         -> None:
     """Induce S suffixes from the L suffixes."""
-    next_end = buckets.calc_ends()
+    buckets = compute_buckets(counts, asize)
     for i in reversed(range(len(x))):
         j = sa[i] - 1
         if sa[i] == 0:
             continue  # noqa: 701
         if not is_s[j]:
             continue  # noqa: 701
-        sa[next_end(x[j])] = j
+        buckets[x[j]+1] -= 1
+        sa[buckets[x[j]+1]] = j
 
 
 def equal_lms(x: memoryview, is_s: bitarray, i: int, j: int) -> bool:
@@ -169,7 +123,7 @@ def reduce_lms(x: memoryview, sa: memoryview, is_s: bitarray) \
     """Construct reduced string from LMS strings."""
     # Compact all the LMS indices in the first
     # part of the suffix array...
-    k = compact_seq(sa, lambda j: is_lms(is_s, j))
+    k = compact_seq(sa, lambda j: is_s[j] and not is_s[j-1])
 
     # Create the alphabet and write the translation
     # into the buffer in the right order
@@ -189,15 +143,17 @@ def reduce_lms(x: memoryview, sa: memoryview, is_s: bitarray) \
     return buffer[:k], compact, letter + 1
 
 
-def reverse_reduction(x: memoryview, sa: memoryview,
-                      offsets: memoryview, red_sa: memoryview,
-                      buckets: Buckets,
+def reverse_reduction(x: memoryview, asize: int,
+                      sa: memoryview,
+                      offsets: memoryview,
+                      red_sa: memoryview,
+                      counts: Counter,
                       is_s: bitarray) -> None:
     """Get the LMS string order back from the reduced suffix array."""
     # Work out where the LMS strings are in the
     # original string. Compact those indices
     # into the buffer offsets
-    compact_seq(offsets, lambda i: is_lms(is_s, i), range(len(x)))
+    compact_seq(offsets, lambda i: is_s[i] and not is_s[i-1], range(len(x)))
 
     # Compact the original indices into sa
     for i, j in enumerate(red_sa):
@@ -207,10 +163,11 @@ def reverse_reduction(x: memoryview, sa: memoryview,
     for i in range(len(red_sa), len(sa)):
         sa[i] = UNDEFINED
 
-    next_end = buckets.calc_ends()
+    buckets = compute_buckets(counts, asize)
     for i in reversed(range(len(red_sa))):
         j, red_sa[i] = red_sa[i], UNDEFINED
-        sa[next_end(x[j])] = j
+        buckets[x[j]+1] -= 1
+        sa[buckets[x[j]+1]] = j
 
 
 def sais_rec(x: memoryview, sa: memoryview,
@@ -223,23 +180,20 @@ def sais_rec(x: memoryview, sa: memoryview,
 
     else:  # recursive case...
         classify_sl(is_s, x)
-        buckets: Buckets = Buckets(x, asize)
-
-        bucket_lms(x, sa, buckets, is_s)
-        induce_l(x, sa, buckets, is_s)
-        induce_s(x, sa, buckets, is_s)
+        counts = Counter(x)
+        bucket_lms(x, asize, sa, counts, is_s)
+        induce_l(x, asize, sa, counts, is_s)
+        induce_s(x, asize, sa, counts, is_s)
 
         red, red_sa, red_asize = reduce_lms(x, sa, is_s)
 
-        del buckets  # Save memory in the recursive call
         sais_rec(red, red_sa, red_asize, is_s)
         # restore state...
         classify_sl(is_s, x)
-        buckets = Buckets(x, asize)
 
-        reverse_reduction(x, sa, red, red_sa, buckets, is_s)
-        induce_l(x, sa, buckets, is_s)
-        induce_s(x, sa, buckets, is_s)
+        reverse_reduction(x, asize, sa, red, red_sa, counts, is_s)
+        induce_l(x, asize, sa, counts, is_s)
+        induce_s(x, asize, sa, counts, is_s)
 
 
 def sais_alphabet(x: array, alpha: Alphabet) -> array:
