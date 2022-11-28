@@ -7,8 +7,10 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 from array import array
+from collections import Counter
 from alphabet import Alphabet
-from sais import sais_alphabet
+# from sais import sais_alphabet
+from prefix_dub import prefix_doubling
 from approx import (
     Edit,
     edits_to_cigar
@@ -33,7 +35,7 @@ def burrows_wheeler_transform(x: str) -> tuple[bytearray, Alphabet, array]:
     and the suffix array over x.
     """
     x_, alpha = Alphabet.mapped_string_with_sentinel(x)
-    sa = sais_alphabet(x_, alpha)
+    sa = prefix_doubling(x_, len(alpha))  # sais_alphabet(x_, alpha)
     bwt = bytearray(x_[j - 1] for j in sa)
     return bwt, alpha, sa
 
@@ -50,16 +52,11 @@ def build_ctab(bwt: bytearray, asize: int) -> npt.NDArray[np.int32]:
     since they have the same letters).
     """
     # Count occurrences of characters in bwt
-    counts = np.zeros(asize, dtype=np.int32)
-    for a in bwt:
-        counts[a] += 1
-    # Get the cumulative sum
-    n = 0
-    for a, count in enumerate(counts):
-        counts[a] = n
-        n += count
-    # That is all we need...
-    return counts
+    counts = Counter(bwt)
+    tab = np.zeros(asize, dtype=np.int32)
+    for a in range(1, asize):
+        tab[a] = counts[a-1] + tab[a-1]
+    return tab
 
 
 def build_otab(bwt: bytearray, asize: int) -> npt.NDArray[np.int32]:

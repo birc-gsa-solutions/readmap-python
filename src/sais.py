@@ -13,6 +13,7 @@ from collections.abc import (
     MutableSequence
 )
 
+
 from alphabet import Alphabet
 from bitarray import bitarray
 
@@ -30,7 +31,7 @@ def classify_sl(is_s: bitarray, x: memoryview) -> None:
 
 def is_lms(is_s: bitarray, i: int) -> bool:
     """Test if index i is an LMS index."""
-    return is_s[i] and not is_s[i - 1] if i > 0 else False
+    return is_s[i] and not is_s[i - 1]
 
 
 class Buckets:
@@ -129,13 +130,16 @@ def equal_lms(x: memoryview, is_s: bitarray, i: int, j: int) -> bool:
         # This happens as a special case in the beginning of placing them.
         return True
 
-    for k in itertools.count():  # k goes from 0 to infinity
-        i_lms = is_lms(is_s, i + k)
-        j_lms = is_lms(is_s, j + k)
+    k = 0
+    while True:
+        ik, jk = i + k, j + k
+        i_lms = is_s[ik] and not is_s[ik - 1]
+        j_lms = is_s[jk] and not is_s[jk - 1]
         if k > 0 and i_lms and j_lms:
             return True
-        if i_lms != j_lms or x[i + k] != x[j + k]:
+        if i_lms != j_lms or x[ik] != x[jk]:
             return False
+        k += 1
 
     # This assert is only hear to help the linter...
     # (checker doesn't understand infinite generators yet)
