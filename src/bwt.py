@@ -119,8 +119,8 @@ def do_m(
     """Perform a match/mismatch operation in the approx search."""
     tbls.edit_ops.append(Edit.MATCH)
     for a in range(1, len(tbls.alpha)):
-        next_left = tbls.ctab[a] + tbls.otab[a, left]
-        next_right = tbls.ctab[a] + tbls.otab[a, right]
+        next_left = int(tbls.ctab[a]) + int(tbls.otab[a, left])
+        next_right = int(tbls.ctab[a]) + int(tbls.otab[a, right])
         if next_left >= next_right:
             continue
 
@@ -148,8 +148,8 @@ def do_d(
     """Perform a deletion operation in the approx search."""
     tbls.edit_ops.append(Edit.DELETE)
     for a in range(1, len(tbls.alpha)):
-        next_left = tbls.ctab[a] + tbls.otab[a, left]
-        next_right = tbls.ctab[a] + tbls.otab[a, right]
+        next_left = int(tbls.ctab[a]) + int(tbls.otab[a, left])
+        next_right = int(tbls.ctab[a]) + int(tbls.otab[a, right])
         if next_left >= next_right:
             continue
         yield from rec_search(tbls, i, next_left, next_right, edits - 1)
