@@ -101,29 +101,16 @@ def equal_lms(x: memoryview, is_s: bitarray, i: int, j: int) -> bool:
     return False  # just for the linter
 
 
-def compact_seq(x: memoryview,
-                p: Callable[[int], bool],
-                y: Optional[memoryview] = None) -> int:
-    """
-    Compacts elements in y satisfying p into x.
-
-    If y is None, do it from x to x.
-    """
-    y = y if y is not None else x
-    k = 0
-    for i in y:
-        if p(i):
-            x[k] = i
-            k += 1
-    return k
-
-
 def reduce_lms(x: memoryview, sa: memoryview, is_s: bitarray) \
         -> tuple[memoryview, memoryview, int]:
     """Construct reduced string from LMS strings."""
     # Compact all the LMS indices in the first
     # part of the suffix array...
-    k = compact_seq(sa, lambda j: is_s[j] and not is_s[j-1])
+    k = 0
+    for i in sa:
+        if is_s[i] and not is_s[i-1]:
+            sa[k] = i
+            k += 1
 
     # Create the alphabet and write the translation
     # into the buffer in the right order
@@ -138,7 +125,11 @@ def reduce_lms(x: memoryview, sa: memoryview, is_s: bitarray) \
         prev = j
 
     # Then compact the buffer into the reduced string
-    compact_seq(buffer, lambda i: i != UNDEFINED)
+    kk = 0
+    for i in buffer:
+        if i != UNDEFINED:
+            buffer[kk] = i
+            kk += 1
 
     return buffer[:k], compact, letter + 1
 
@@ -153,7 +144,11 @@ def reverse_reduction(x: memoryview, asize: int,
     # Work out where the LMS strings are in the
     # original string. Compact those indices
     # into the buffer offsets
-    compact_seq(offsets, lambda i: is_s[i] and not is_s[i-1], range(len(x)))
+    k = 0
+    for i in range(len(x)):
+        if is_s[i] and not is_s[i-1]:
+            offsets[k] = i
+            k += 1
 
     # Compact the original indices into sa
     for i, j in enumerate(red_sa):
