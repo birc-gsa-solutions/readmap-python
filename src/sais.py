@@ -161,7 +161,6 @@ def reverse_reduction(x: memoryview, asize: int,
         sa[buckets[x[j]+1]] = j
 
 
-@profile
 def sais_rec(x: memoryview, sa: memoryview,
              asize: int, is_s: bitarray) -> None:
     """Recursive SAIS algorithm."""
