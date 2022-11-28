@@ -191,8 +191,9 @@ def build_dtab(
     min_edits = 0
     left, right, i = 0, len(sa), len(p) - 1
     for i, a in enumerate(p):
-        left = ctab[a] + rotab[a, left]
-        right = ctab[a] + rotab[a, right]
+        a_region = int(ctab[a])
+        left = a_region + int(rotab[a, left])
+        right = a_region + int(rotab[a, right])
         if left == right:
             min_edits += 1
             left, right = 0, len(sa)
