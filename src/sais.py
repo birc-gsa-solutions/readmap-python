@@ -25,8 +25,8 @@ def classify_sl(is_s: bitarray, x: memoryview) -> None:
         is_s[i] = x[i] < x[i + 1] or (x[i] == x[i + 1] and is_s[i + 1])
 
 
-def compute_buckets(counts: Counter, asize: int) -> npt.NDArray[np.int32]:
-    buckets = np.zeros(asize+1, dtype=np.int32)
+def compute_buckets(counts: Counter, asize: int) -> list[int]:
+    buckets = [0] * (asize + 1)  # np.zeros(asize+1, dtype=np.int32)
     for a in range(1, asize+1):
         buckets[a] = buckets[a-1] + counts[a-1]
     return buckets
@@ -54,9 +54,7 @@ def induce_l(x: memoryview, asize: int,
     buckets = compute_buckets(counts, asize)
     for i in range(len(x)):
         j = sa[i] - 1
-        if sa[i] == 0 or sa[i] == UNDEFINED:
-            continue
-        if is_s[j]:
+        if sa[i] in (0, UNDEFINED) or is_s[j]:
             continue
         sa[buckets[x[j]]] = j
         buckets[x[j]] += 1
@@ -70,10 +68,8 @@ def induce_s(x: memoryview, asize: int,
     buckets = compute_buckets(counts, asize)
     for i in reversed(range(len(x))):
         j = sa[i] - 1
-        if sa[i] == 0:
-            continue  # noqa: 701
-        if not is_s[j]:
-            continue  # noqa: 701
+        if sa[i] == 0 or not is_s[j]:
+            continue
         buckets[x[j]+1] -= 1
         sa[buckets[x[j]+1]] = j
 
@@ -165,6 +161,7 @@ def reverse_reduction(x: memoryview, asize: int,
         sa[buckets[x[j]+1]] = j
 
 
+@profile
 def sais_rec(x: memoryview, sa: memoryview,
              asize: int, is_s: bitarray) -> None:
     """Recursive SAIS algorithm."""
