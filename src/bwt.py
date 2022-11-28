@@ -4,6 +4,8 @@ from typing import (
     Iterator, Callable,
     NamedTuple
 )
+import numpy as np
+import numpy.typing as npt
 from array import array
 from alphabet import Alphabet
 from sais import sais_alphabet
@@ -36,109 +38,66 @@ def burrows_wheeler_transform(x: str) -> tuple[bytearray, Alphabet, array]:
     return bwt, alpha, sa
 
 
-class CTable:
+def build_ctab(bwt: bytearray, asize: int) -> npt.NDArray[np.int32]:
     """
-    C-table for other bwt/fm-index search algorithms.
+    Construct a C-table.
 
-    for CTable ctab, ctab[⍺] is the number of occurrences
+    Compute the C-table from the bwt transformed string and
+    the alphabet size.
+
+    For CTable ctab, ctab[⍺] is the number of occurrences
     of letters a < ⍺ in the bwt string (or the orignal string,
     since they have the same letters).
     """
-
-    _cumsum: list[int]
-
-    def __init__(self, bwt: bytearray, asize: int) -> None:
-        """
-        Construct a C-table.
-
-        Compute the C-table from the bwt transformed string and
-        the alphabet size.
-        """
-        # Count occurrences of characters in bwt
-        counts = [0] * asize
-        for a in bwt:
-            counts[a] += 1
-        # Get the cumulative sum
-        n = 0
-        for a, count in enumerate(counts):
-            counts[a] = n
-            n += count
-        # That is all we need...
-        self._cumsum = counts
-
-    def __getitem__(self, a: int) -> int:
-        """Get the number of occurrences of letters in the bwt less than a."""
-        return self._cumsum[a]
+    # Count occurrences of characters in bwt
+    counts = np.zeros(asize, dtype=np.int32)
+    for a in bwt:
+        counts[a] += 1
+    # Get the cumulative sum
+    n = 0
+    for a, count in enumerate(counts):
+        counts[a] = n
+        n += count
+    # That is all we need...
+    return counts
 
 
-class OTable:
+def build_otab(bwt: bytearray, asize: int) -> npt.NDArray[np.int32]:
     """
-    O-table for the FM-index based search.
+    Create O-table.
 
-    For OTable otab, otab[a,i] is the number of occurrences j < i
-    where bwt[j] == a.
+    Compute the O-table from the bwt transformed string and the size
+    of the alphabet the bwt string is over.
     """
+    nrow = asize
+    ncol = len(bwt) + 1
 
-    _tbl: list[list[int]]
+    tbl = np.zeros((nrow, ncol), dtype=np.int32)
+    char_add = np.eye(nrow, nrow, dtype=np.int32)
 
-    def __init__(self, bwt: bytearray, asize: int) -> None:
-        """
-        Create O-table.
+    for i in range(1, ncol):
+        tbl[:, i] = tbl[:, i-1] + char_add[:, bwt[i-1]]
 
-        Compute the O-table from the bwt transformed string and the size
-        of the alphabet the bwt string is over.
-        """
-        # We exclude $ from lookups, so there are this many
-        # rows.
-        nrow = asize - 1
-        # We need to index to len(bwt), but we don't represent first column
-        # so there are len(bwt) columns.
-        ncol = len(bwt)
-
-        self._tbl = [[0] * ncol for _ in range(nrow)]
-
-        # The first column is all zeros, the second
-        # should hold a 1 in the row that has character
-        # bwt[0]. The we b-1 because of the sentinel and
-        # we use column 0 for the first real column.
-        self._tbl[bwt[0] - 1][0] = 1
-
-        # We already have cols 0 and 1. Now we need to
-        # go up to (and including) len(bwt).
-        for i in range(2, len(bwt) + 1):
-            b = bwt[i - 1]
-            # Characters, except for sentinel
-            for a in range(1, asize):
-                self._tbl[a - 1][i - 1] = self._tbl[a - 1][i - 2] + (a == b)
-
-    def __getitem__(self, idx: tuple[int, int]) -> int:
-        """
-        Get the number of occurrences j < i where bwt[j] == a.
-
-        a is the first and i the second value in the idx tuple.
-        """
-        a, i = idx
-        assert a > 0, "Don't look up the sentinel"
-        return 0 if i == 0 else self._tbl[a - 1][i - 1]
+    return tbl
 
 
 class FMIndexTables(NamedTuple):
     """Preprocessed FMIndex tables."""
 
     alpha: Alphabet
-    sa: list[int]
-    ctab: CTable
-    otab: OTable
-    rotab: OTable
+    sa: array
+    ctab: npt.NDArray[np.int32]
+    otab: npt.NDArray[np.int32]
+    rotab: npt.NDArray[np.int32]
 
 
 def preprocess_tables(x: str) -> FMIndexTables:
     """Preprocess tables for exact FM/bwt search."""
     bwt, alpha, sa = burrows_wheeler_transform(x)
-    ctab = CTable(bwt, len(alpha))
-    otab = OTable(bwt, len(alpha))
+    ctab = build_ctab(bwt, len(alpha))
+    otab = build_otab(bwt, len(alpha))
     bwt, alpha, _ = burrows_wheeler_transform(x[::-1])
-    rotab = OTable(bwt, len(alpha))
+    rotab = build_otab(bwt, len(alpha))
     return FMIndexTables(alpha, sa, ctab, otab, rotab)
 
 
@@ -147,9 +106,9 @@ class LiDurbinState(NamedTuple):
 
     alpha: Alphabet
     sa: list[int]
-    ctab: CTable
-    otab: OTable
-    rotab: OTable
+    ctab: npt.NDArray[np.int32]
+    otab: npt.NDArray[np.int32]
+    rotab: npt.NDArray[np.int32]
     dtab: list[int]
     edit_ops: list[Edit]
     p: bytearray
@@ -224,9 +183,11 @@ def rec_search(
     yield from do_d(tbls, i, left, right, edits)
 
 
+# @profile
 def build_dtab(
     p: bytearray, sa: list[int],
-    ctab: CTable, rotab: OTable
+    ctab: npt.NDArray[np.int32],
+    rotab: npt.NDArray[np.int32]
 ) -> list[int]:
     """Build the D table for the approximative search."""
     dtab = [0] * len(p)
@@ -244,13 +205,14 @@ def build_dtab(
 
 def approx_searcher_from_tables(
         alpha: Alphabet,
-        sa: list[int],
-        ctab: CTable,
-        otab: OTable,
-        rotab: OTable
+        sa: array,
+        ctab: npt.NDArray[np.int32],
+        otab: npt.NDArray[np.int32],
+        rotab: npt.NDArray[np.int32]
 ) -> ApproxSearchFunc:
     """Build an exact search function from preprocessed tables."""
 
+    # @profile
     def search(p_: str, edits: int) -> Iterator[tuple[int, str]]:
         assert p_, "We can't do approx search with an empty pattern!"
         try:
