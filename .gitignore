@@ -1,2 +1,6 @@
 __pycache__
 checks.json
+.DS_Store
+.vscode
+__TEST__
+test-data
