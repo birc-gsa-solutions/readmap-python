@@ -4,6 +4,9 @@ from typing import (
     Iterator, Callable,
     NamedTuple
 )
+from collections.abc import (
+    Sequence, MutableSequence
+)
 import numpy as np
 import numpy.typing as npt
 from array import array
@@ -24,7 +27,8 @@ ApproxSearchFunc = Callable[
 ]
 
 
-def burrows_wheeler_transform(x: str) -> tuple[bytearray, Alphabet, array]:
+def burrows_wheeler_transform(x: str) -> \
+        tuple[bytearray, Alphabet, array]:
     """
     Construct the Burrows-Wheeler transform.
 
@@ -102,7 +106,7 @@ class LiDurbinState(NamedTuple):
     """Full state when running the Li & Durbin algorithm."""
 
     alpha: Alphabet
-    sa: list[int]
+    sa: array
     ctab: npt.NDArray[np.int32]
     otab: npt.NDArray[np.int32]
     rotab: npt.NDArray[np.int32]
@@ -182,7 +186,8 @@ def rec_search(
 
 # @profile
 def build_dtab(
-    p: bytearray, sa: list[int],
+    p: bytearray,
+    sa: array,
     ctab: npt.NDArray[np.int32],
     rotab: npt.NDArray[np.int32]
 ) -> list[int]:

@@ -2,12 +2,11 @@
 
 from array import array
 from typing import (
-    Callable,
-    Optional,
     TypeVar
 )
-import numpy as np
-import numpy.typing as npt
+# from collections.abc import (
+#     Sequence, MutableSequence
+# )
 from collections import Counter
 
 from alphabet import Alphabet
@@ -25,7 +24,8 @@ def classify_sl(is_s: bitarray, x: memoryview) -> None:
         is_s[i] = x[i] < x[i + 1] or (x[i] == x[i + 1] and is_s[i + 1])
 
 
-def compute_buckets(counts: Counter, asize: int) -> list[int]:
+def compute_buckets(counts: Counter[int], asize: int) -> list[int]:
+    """Compute the bucket pointers from counts."""
     buckets = [0] * (asize + 1)  # np.zeros(asize+1, dtype=np.int32)
     for a in range(1, asize+1):
         buckets[a] = buckets[a-1] + counts[a-1]
@@ -33,7 +33,8 @@ def compute_buckets(counts: Counter, asize: int) -> list[int]:
 
 
 def bucket_lms(x: memoryview, asize: int,
-               sa: memoryview, counts: Counter,
+               sa: memoryview,
+               counts: Counter[int],
                is_s: bitarray) \
         -> None:
     """Place LMS strings in their correct buckets."""
@@ -47,7 +48,8 @@ def bucket_lms(x: memoryview, asize: int,
 
 
 def induce_l(x: memoryview, asize: int,
-             sa: memoryview, counts: Counter,
+             sa: memoryview,
+             counts: Counter[int],
              is_s: bitarray) \
         -> None:
     """Induce L suffixes from the LMS strings."""
@@ -61,7 +63,8 @@ def induce_l(x: memoryview, asize: int,
 
 
 def induce_s(x: memoryview, asize: int,
-             sa: memoryview, counts: Counter,
+             sa: memoryview,
+             counts: Counter[int],
              is_s: bitarray) \
         -> None:
     """Induce S suffixes from the L suffixes."""
@@ -134,7 +137,7 @@ def reverse_reduction(x: memoryview, asize: int,
                       sa: memoryview,
                       offsets: memoryview,
                       red_sa: memoryview,
-                      counts: Counter,
+                      counts: Counter[int],
                       is_s: bitarray) -> None:
     """Get the LMS string order back from the reduced suffix array."""
     # Work out where the LMS strings are in the
