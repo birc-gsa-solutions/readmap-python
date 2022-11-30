@@ -171,16 +171,14 @@ def rec_search(tbls: FMIndexTables,
         -> Iterator[tuple[int, str]]:
     """Handle recursive operations in approx search."""
     # Do we have a match here?
-    if i < 0 <= edits:
+    if edits < tbls.dtab[i]:
+        return  # Not possible to get anywhere with this...
+    if i < 0:
         # Remember to reverse the operations, since
         # we did the backwards in the bwt search
         cigar = edits_to_cigar(tbls.edit_ops[::-1])
         for j in range(left, right):
             yield tbls.sa[j], cigar
-        return
-
-    # Can we get to a match with the edits we have left?
-    if edits < tbls.dtab[i]:
         return
 
     yield from do_m(tbls, i, left, right, edits)
