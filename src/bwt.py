@@ -138,7 +138,10 @@ def do_m(tbls: FMIndexTables,
             continue
 
         next_edits = edits - (a != tbls.p[i])
-        yield from rec_search(tbls, i - 1, next_left, next_right, next_edits)
+        if next_edits >= tbls.dtab[i-1]:
+            yield from rec_search(tbls, i - 1,
+                                  next_left, next_right,
+                                  next_edits)
     tbls.edit_ops.pop()
 
 
@@ -146,15 +149,22 @@ def do_i(tbls: FMIndexTables,
          i: int, left: int, right: int,
          edits: int) -> Iterator[tuple[int, str]]:
     """Perform an insertion operation in the approx search."""
-    tbls.edit_ops.append(Edit.INSERT)
-    yield from rec_search(tbls, i - 1, left, right, edits - 1)
-    tbls.edit_ops.pop()
+    edits -= 1
+    i -= 1
+    if edits >= tbls.dtab[i]:
+        tbls.edit_ops.append(Edit.INSERT)
+        yield from rec_search(tbls, i, left, right, edits)
+        tbls.edit_ops.pop()
 
 
 def do_d(tbls: FMIndexTables,
          i: int, left: int, right: int,
          edits: int) -> Iterator[tuple[int, str]]:
     """Perform a deletion operation in the approx search."""
+    if edits - 1 < tbls.dtab[i]:
+        # We can't do deletions if we don't have enough edits...
+        return
+
     tbls.edit_ops.append(Edit.DELETE)
     for a in range(1, len(tbls.alpha)):
         next_left = tbls.ctab[a] + tbls.otab[a, left]
