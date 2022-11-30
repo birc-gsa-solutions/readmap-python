@@ -205,6 +205,11 @@ def approx_searcher_from_tables(
             return  # can't map, so no matches
 
         dtab = build_dtab(p, sa, ctab, rotab)
+        if dtab[len(p)-1] > edits:
+            # If it takes more edits than we have,
+            # we might as well bail now...
+            return
+
         tbls = FMIndexTables(alpha, sa,
                              ctab, otab, rotab, dtab,
                              list[Edit](), p)
